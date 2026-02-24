@@ -1,56 +1,61 @@
-// 1️⃣ Load environment variables
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { createClient } from "@supabase/supabase-js";
 
-// 2️⃣ Import packages
-const express = require("express");
-const cors = require("cors");
-const { createClient } = require("@supabase/supabase-js");
+dotenv.config();
 
-// 3️⃣ Create Express app
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 4️⃣ Connect to Supabase using .env variables
+// ✅ Connect to Supabase using Railway environment variables
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY
 );
 
-// 5️⃣ Create Job Route
+// ✅ Root route (so you don't see "Cannot GET /")
+app.get("/", (req, res) => {
+  res.json({ message: "Backend is running 🚀" });
+});
+
+// ✅ Create Job Route
 app.post("/create-job", async (req, res) => {
   try {
-    const { email, transition } = req.body;
+    const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required" });
+    }
 
     const { data, error } = await supabase
-      .from("jobs") // Make sure your table name is "jobs"
+      .from("jobs")
       .insert([
         {
-          email: email,
-          transition: transition,
-          status: "pending",
-          output_url: null,
-        },
+          prompt: prompt,
+          status: "pending"
+        }
       ])
       .select();
 
     if (error) {
-      console.error("Supabase Error:", error);
       return res.status(500).json({ error: error.message });
     }
 
     res.json({
-      message: "Job saved to database!",
-      job: data[0],
+      message: "Job created successfully",
+      job: data
     });
 
   } catch (err) {
-    console.error("Server Error:", err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Something went wrong" });
   }
 });
 
-// 6️⃣ Start Server
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+// ✅ Railway dynamic port
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
